@@ -1,6 +1,8 @@
 -- Crear la base de datos
 CREATE DATABASE IF NOT EXISTS DonacionesDB;
 USE DonacionesDB;
+-- Asegurar que el trigger no exista antes de crearlo.
+DROP TRIGGER IF EXISTS donante_delete;
 
 -- Tablas
 
@@ -86,13 +88,16 @@ CREATE TABLE DebitoTransferencia(
 	UNIQUE(cbu)
 );
 
+
+-- tabla para la creacion del Trigger
+
 CREATE TABLE AuditoriaEliminacionDonante (
     id_auditoria INT AUTO_INCREMENT PRIMARY KEY,
     dni_donante VARCHAR(10),
     nombre VARCHAR(50),
     apellido VARCHAR(50),
-    fecha_eliminacion DATETIME DEFAULT CURRENT_TIMESTAMP,
-    usuario VARCHAR(50)
+    usuario VARCHAR(50),
+	fecha_eliminacion DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- restricciones adicionales, Trigger para el borrado y un check para el Estado
@@ -103,7 +108,7 @@ CREATE TRIGGER donante_delete
 BEFORE DELETE ON Donante
 FOR EACH ROW
 BEGIN
-    INSERT INTO AuditoriaEliminacionDonante (dni_donante, nombre, apellido, usuario)
+    INSERT INTO AuditoriaEliminacionDonante (dni_donante, nombre, apellido, usuario, fecha_eliminacion)
     SELECT OLD.dni, p.nombre, p.apellido, CURRENT_USER(), NOW() 
     FROM Padrino p
     WHERE p.dni = OLD.dni;
