@@ -25,17 +25,73 @@ public class DonanteDAO {
     }
 
     public void eliminarDonante(String dni) throws SQLException {
+    Connection conn = null;
+    try {
+        conn = ConexionDB.conectar();
+        conn.setAutoCommit(false);
+
+        // 1. Verificar y registrar auditoría
+        registrarAuditoria(conn, dni);
+        
+        // 2. Eliminar aportes
+        try {
+            eliminarAportes(conn, dni);
+        } catch (SQLException e) {
+            System.out.println("Advertencia: No se encontraron aportes para eliminar");
+        }
+        
+        // 3. Eliminar donante
+        eliminarDonanteDirecto(conn, dni);
+        
+        conn.commit();
+        System.out.println("Donante eliminado correctamente.");
+    } catch (SQLException e) {
+        if (conn != null) {
+            conn.rollback();
+        }
+        throw new SQLException("Error al eliminar donante: " + e.getMessage());
+    } finally {
+        if (conn != null) {
+            try {
+                conn.setAutoCommit(true);
+                conn.close();
+            } catch (SQLException e) {
+                System.err.println("Error al cerrar conexión: " + e.getMessage());
+            }
+        }
+    }
+}
+
+    private void registrarAuditoria(Connection conn, String dni) throws SQLException {
+    // Solo verificar que exista el padrino, el trigger hará el registro
+    String sql = "SELECT 1 FROM Padrino WHERE dni = ?";
+    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        stmt.setString(1, dni);
+        try (ResultSet rs = stmt.executeQuery()) {
+            if (!rs.next()) {
+                throw new SQLException("No se encontró el padrino con DNI: " + dni);
+            }
+        }
+    }
+}
+
+    private void eliminarAportes(Connection conn, String dni) throws SQLException {
+        String sql = "DELETE FROM Aporta WHERE dni_d = ?";
+        
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, dni);
+            stmt.executeUpdate();
+        }
+    }
+
+    private void eliminarDonanteDirecto(Connection conn, String dni) throws SQLException {
         String sql = "DELETE FROM Donante WHERE dni = ?";
-
-        try (Connection conn = ConexionDB.conectar();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
-
+        
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, dni);
             int filas = stmt.executeUpdate();
-            if (filas > 0) {
-                System.out.println("Donante eliminado correctamente.");
-            } else {
-                System.out.println("No se encontró un donante con ese DNI.");
+            if (filas == 0) {
+                throw new SQLException("No se encontró un donante con ese DNI");
             }
         }
     }

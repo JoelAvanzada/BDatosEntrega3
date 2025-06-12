@@ -1,5 +1,6 @@
 package src;
 
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Scanner;
@@ -263,15 +264,28 @@ public class Main {
     }
 
     private static void eliminarDonanteDesdeInput(Scanner scanner) {
-        try {
-            System.out.print("Ingrese el DNI del donante a eliminar: ");
-            String dni = scanner.nextLine();
-            DonanteDAO donanteDAO = new DonanteDAO();
-            donanteDAO.eliminarDonante(dni);
-        } catch (Exception e) {
-            System.out.println("Error al eliminar donante: " + e.getMessage());
+    try {
+        System.out.print("Ingrese el DNI del donante a eliminar: ");
+        String dni = scanner.nextLine().trim();
+        
+        if (dni.isEmpty()) {
+            System.out.println("Error: El DNI no puede estar vacío");
+            return;
         }
+
+        DonanteDAO donanteDAO = new DonanteDAO();
+        donanteDAO.eliminarDonante(dni);
+        
+    } catch (SQLException e) {
+    System.out.println("\n[ERROR] " + e.getMessage());
+    System.out.println("Operación cancelada. Razón:");
+    if (e.getMessage().contains("foreign key constraint")) {
+        System.out.println("- Existen datos asociados que no pudieron eliminarse");
+    } else {
+        System.out.println("- Error en la base de datos: " + e.getSQLState());
     }
+    }
+}
 
     private static void listarPadrinosConProgramas() {
         try {
